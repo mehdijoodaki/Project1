@@ -1,0 +1,149 @@
+from pyspark.sql import SQLContext
+
+from pyspark.sql.functions import isnan, when, count, col, lit
+
+from pyspark.sql.types import *
+
+sqlContext = SQLContext (sc)
+
+data=sqlContext.read.csv("/home/mehdij/Desktop/cars.txt", inferSchema = True, header = True)
+
+#for schema of data
+data.printSchema()
+
+
+#for type and name columns
+data.dtypes   
+
+#for show year colums, space beside year related to data beacuse own data for year name has a space
+data.select(' year').show()  
+
+
+data.describe(' year').show() #for summary of year column mead min max mode count
+
+  +-------+------------------+
+|summary|              year|
++-------+------------------+
+|  count|               261|
+|   mean|1976.8199233716475|
+| stddev|3.6376960155843023|
+|    min|            1971.0|
+|    max|            1983.0|
++-------+------------------+
+
+
+#for show number oof partitions
+data.rdd.getNumPartitions()  
+
+
+
+
+
+
+#Also, if you want to replace those null values with some other value too, you can use otherwise in combination with when. Let's say you want to impute 0 there:
+
+from pyspark.sql.functions import when   
+
+df.withColumn('c1', when(df.c1.isNotNull(), 1).otherwise(0))
+  .withColumn('c2', when(df.c2.isNotNull(), 1).otherwise(0))
+  .withColumn('c3', when(df.c3.isNotNull(), 1).otherwise(0))
+
+
+
+
+
+
+data.describe(' brand').show()
+
++-------+--------+
+|summary|   brand|
++-------+--------+
+|  count|     261|
+|   mean|    null|
+| stddev|    null|
+|    min| Europe.|
+|    max|     US.|
++-------+--------+
+
+
+#for nan values 
+df.select([count(when(df[c]=='nan', c)).alias(c) for c in df.columns]).show()
+
++---+----------+------------+---+----------+-----------+-----+------+
+|mpg| cylinders| cubicinches| hp| weightlbs| time-to-60| year| brand|
++---+----------+------------+---+----------+-----------+-----+------+
+| 16|         0|           0|  0|         0|          0|    0|     0|
++---+----------+------------+---+----------+-----------+-----+------+
+
+
+#for null value you can use up code for null
+data.select([count(when(isnan(c) | col(c).isNull(), c)).alias(c) for c in data.columns]).show()
+
++---+----------+------------+---+----------+-----------+-----+------+
+|mpg| cylinders| cubicinches| hp| weightlbs| time-to-60| year| brand|
++---+----------+------------+---+----------+-----------+-----+------+
+|  0|         0|           0|  0|         0|          0|    0|     0|
++---+----------+------------+---+----------+-----------+-----+------+
+
+
+#for replace one speacial column and speiacial number
+in below example the 14 number of mpg column replace with 0 and another number has own thier values
+
+df= data.withColumn("mpg", when(data["mpg"]=='14',0).otherwise(data["mpg"]))
++----+----------+------------+-----+----------+-----------+------+--------+
+| mpg| cylinders| cubicinches|   hp| weightlbs| time-to-60|  year|   brand|
++----+----------+------------+-----+----------+-----------+------+--------+
+| 0.0|       8.0|       350.0|165.0|    4209.0|       12.0|1972.0|     US.|
+|31.9|       4.0|        89.0| 71.0|    1925.0|       14.0|1980.0| Europe.|
+|17.0|       8.0|       302.0|140.0|    3449.0|       11.0|1971.0|     US.|
+|15.0|       8.0|       400.0|150.0|    3761.0|       10.0|1971.0|     US.|
+|30.5|       4.0|        98.0| 63.0|    2051.0|       17.0|1978.0|     US.|
+|23.0|       8.0|       350.0|125.0|    3900.0|       17.0|1980.0|     US.|
+|13.0|       8.0|       351.0|158.0|    4363.0|       13.0|1974.0|     US.|
+| 0.0|       8.0|       440.0|215.0|    4312.0|        9.0|1971.0|     US.|
+|25.4|       5.0|       183.0| 77.0|    3530.0|       20.0|1980.0| Europe.|
+|37.7|       4.0|        89.0| 62.0|    2050.0|       17.0|1982.0|  Japan.|
+|34.0|       4.0|       108.0| 70.0|    2245.0|       17.0|1983.0|  Japan.|
+|34.3|       4.0|        97.0| 78.0|    2188.0|       16.0|1981.0| Europe.|
+|16.0|       8.0|       302.0|140.0|    4141.0|       14.0|1975.0|     US.|
+|11.0|       8.0|       350.0|180.0|    3664.0|       11.0|1974.0|     US.|
+|19.1|       6.0|       225.0| 90.0|    3381.0|       19.0|1981.0|     US.|
+|16.9|       8.0|       350.0|155.0|    4360.0|       15.0|1980.0|     US.|
+|31.8|       4.0|        85.0| 65.0|    2020.0|       19.0|1980.0|  Japan.|
+|16.0|       8.0|       304.0|150.0|    3433.0|       12.0|1971.0|     US.|
+|24.0|       4.0|       113.0| 95.0|    2278.0|       16.0|1973.0|  Japan.|
+|24.0|       4.0|       107.0| 90.0|    2430.0|       15.0|1971.0| Europe.|
++----+----------+------------+-----+----------+-----------+------+--------+
+  
+
+#for all columns if you whant replace 
+cols = df.columns  # list of all columns
+for col in cols:
+    df= df.withColumn(col, when(df[col]>0,1).otherwise(0))
+
+
+#for calculate sum of one column
+from pyspark.sql.functions as F
+data.select(F.sum("mpg")).collect()[0][0] 
+
+#for sum all
+data.groupBy().sum().show()
++--------+---------------+-----------------+--------+---------------+----------------+----------+
+|sum(mpg)|sum( cylinders)|sum( cubicinches)|sum( hp)|sum( weightlbs)|sum( time-to-60)|sum( year)|
++--------+---------------+-----------------+--------+---------------+----------------+----------+
+|  6040.8|         1459.0|          52488.0| 27760.0|       784433.0|          4058.0|  515950.0|
++--------+---------------+-----------------+--------+---------------+----------------+----------+
+
+
+#for histogram
+df.groupBy(' brand').count().show()
++--------+-----+
+|   brand|count|
++--------+-----+
+| Europe.|   48|
+|  Japan.|   51|
+|     US.|  162|
++--------+-----+
+
+
+
